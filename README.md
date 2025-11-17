@@ -1,43 +1,44 @@
-# Proxies, Upgradeable Smart Contracts and their Security
+# Proxy、可升级智能合约及其安全性
 
 ![](./public/mindmap.png)
 
-## Table of Contents
+## 目录
 
--   [Introduction](#introduction)
--   [Smart Contract Storage Layout](#smart-contract-storage-layout)
--   [`delegatecall`](#delegatecall)
--   [Proxy Patterns](#proxy-patterns)
-    -   [The Minimal Proxy](#the-minimal-proxy)
-    -   [The Initializeable Proxy](#the-initializeable-proxy)
-    -   [The Upgradeable Proxy](#the-upgradeable-proxy)
-    -   [EIP-1967 Upgradeable Proxy](#eip-1967-upgradeable-proxy)
-        -   [What is the Unstructured Storage Pattern?](#what-is-the-unstructured-storage-pattern)
-    -   [Transparent Proxy Pattern](#transparent-proxy-pattern-tpp)
-    -   [Universal Upgradeable Proxy Standard (UUPS)](#universal-upgradeable-proxy-standard-uups)
-    -   [Beacon Proxy](#beacon-proxy)
-    -   [Diamond Proxy](#diamond-proxy)
-    -   [Comparing Proxy Patterns](#comparing-proxy-patterns)
--   [Security Guide to Proxy Vulnerabilities](#security-guide-to-proxy-vulnerabilities)
-    -   [Delegatecall to non-existent external contract](#1-delegatecall-to-non-existent-external-contract)
-    -   [Delegatecall with Selfdestruct Vulnerability](#2-delegatecall-with-selfdestruct-vulnerability)
-    -   [Function Clashing Vulnerability](#3-function-clashing-vulnerability)
-    -   [Storage Collision Vulnerability](#4-storage-collision-vulnerability)
-    -   [Uninitialized Proxy Vulnerability](#5-uninitialized-proxy-vulnerability)
--   [Development Guide to Proxies](#development-guide-to-proxies)
--   [References](#references)
+- [介绍](#介绍)
+- [智能合约存储布局](#智能合约存储布局)
+- [`delegatecall`](#delegatecall)
+- [Proxy 模式](#proxy-模式)
+  - [最简 Proxy](#最简-proxy)
+  - [可初始化 Proxy](#可初始化-proxy)
+  - [可升级 Proxy](#可升级-proxy)
+  - [EIP-1967 可升级 Proxy](#eip-1967-可升级-proxy)
+    - [什么是非结构化存储模式？](#什么是非结构化存储模式)
+  - [透明 Proxy 模式 (TPP)](#透明-proxy-模式-tpp)
+  - [通用可升级 Proxy 标准 (UUPS)](#通用可升级-proxy-标准-uups)
+  - [Beacon Proxy](#beacon-proxy)
+  - [Diamond Proxy](#diamond-proxy)
+  - [Proxy 模式对比](#比较-proxy-模式)
+- [Proxy 漏洞安全指南](#proxy-漏洞安全指南)
+  - [Delegatecall 到不存在的外部合约](#1-delegatecall-到不存在的外部合约)
+  - [Delegatecall 与 Selfdestruct 漏洞](#2-delegatecall-与-selfdestruct-漏洞)
+  - [函数冲突漏洞](#3-函数冲突漏洞)
+  - [存储冲突漏洞](#4-存储冲突漏洞)
+  - [未初始化 Proxy 漏洞](#5-未初始化-proxy-漏洞)
+- [Proxy 开发指南](#proxy-开发指南)
+- [参考资料](#参考资料)
 
-## Introduction
+## 介绍
 
-Welcome to the Proxies & Upgradeable Smart Contracts repository by QuillAudits. This repository contains all the technical, theoretical and practical concepts, their explanations and implementations required to understand everything about the upgradeability of smart contracts in Solidity.
+欢迎来到 QuillAudits 的 Proxy 与可升级智能合约仓库。本仓库收录了理解 Solidity 智能合约可升级性所需的所有技术概念、理论基础、实践说明以及实现示例。
 
-One thing the Blockchain is very often connected to is the immutability of data. For long time it was "Once it's deployed, it cannot be altered". That is still true for historical transaction information. But it is not true for Smart Contract storage and addresses.
+区块链常被视为具有数据不可篡改性的系统，人们长期以来认为“一旦部署，就无法更改”。这对于历史交易信息依然成立，但对于智能合约的存储与地址而言，情况并非完全如此。
 
 #### Why do you need a proxy and how do I use it?
+#### 为什么需要 Proxy 以及如何使用它？
 
-By design, contract code on a blockchain is immutable. Though a key feature, it leads to difficulty when considering upgradeability. Newer entrants may wonder why “upgrading” on a blockchain is necessary. Inevitabilities requiring code changes still remain, including: bug fixes, patches, optimizations, feature releases, etc.
+从设计上来看，部署在区块链上的合约代码是不可变的。虽然不可篡改性是区块链的核心特性之一，但在需要可升级性时也会带来挑战。许多新手可能会疑惑：既然区块链强调不可篡改，为何还需要“升级”？事实上，仍有许多需要修改代码的场景，例如错误修复、安全补丁、性能优化、新功能发布等。
 
-Before directly jumping into proxies and upgradeable contracts, we need to first understand the working of Solidity's `delegatecall` opcode and before understanding `delegatecall`, it would be helpful to see how the EVM saves the contract's variables in storage.
+在直接进入 Proxy 和可升级合约之前，我们需要先了解 Solidity 的 `delegatecall` 操作码是如何工作的。而在理解 `delegatecall` 之前，了解 EVM 如何在存储中保存合约变量也会很有帮助。
 
 ## Smart Contract Storage Layout
 
