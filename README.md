@@ -33,45 +33,47 @@
 
 区块链常被视为具有数据不可篡改性的系统，人们长期以来认为“一旦部署，就无法更改”。这对于历史交易信息依然成立，但对于智能合约的存储与地址而言，情况并非完全如此。
 
-#### Why do you need a proxy and how do I use it?
 #### 为什么需要 Proxy 以及如何使用它？
 
 从设计上来看，部署在区块链上的合约代码是不可变的。虽然不可篡改性是区块链的核心特性之一，但在需要可升级性时也会带来挑战。许多新手可能会疑惑：既然区块链强调不可篡改，为何还需要“升级”？事实上，仍有许多需要修改代码的场景，例如错误修复、安全补丁、性能优化、新功能发布等。
 
 在直接进入 Proxy 和可升级合约之前，我们需要先了解 Solidity 的 `delegatecall` 操作码是如何工作的。而在理解 `delegatecall` 之前，了解 EVM 如何在存储中保存合约变量也会很有帮助。
 
-## Smart Contract Storage Layout
+## 智能合约存储布局
 
-Contract storage layout refers to the rules governing how contracts’ storage variables are laid out in long-term memory. Almost all smart contracts have state variables that need to be stored long-term. There are 3 different types of memory in Solidity that developers can use to instruct the EVM where to store their variables: memory, calldata, and storage. Here, we'll be talking about the storage layout.
+合约存储布局是指的是管理合约中存储变量在长期存储中如何排列的规则。几乎所有的智能合约都有需要长期保存的状态变量。在 Solidity 中，开发者可以使用 3 种不同类型的存储空间来指示 EVM 将变量储存在哪里：`memory`、`calldata` 和 `storage`。这里，我们将讨论存储布局。
 
-Each contract gets its own storage area which is a persistent, read-write memory area. Contracts can only read and write from their own storage. A contract’s storage is divided into 2²⁵⁶ slots of 32 bytes each. All slots are initialized to a value of 0.
+每个合约都有自己的存储区域，这是一个持久的可读写存储空间区域。合约只能从自己的存储中读取和写入。合约的存储被划分为 2²⁵⁶ 个槽位，每个槽位为 32 字节(bytes)。所有槽位的初始值均为 0。
 
 ### How are state variables stored?
+### 状态变量是如何存储的？
 
-Solidity will automatically map every defined state variable of your contract to a slot in storage in the order the state variables are declared, starting at slot 0.
-Here we can see how variables a, b and c get mapped to their storage slots.
+Solidity 会按照状态变量在合约中声明的顺序，从槽位 0 开始，自动将每个已定义的状态变量映射到存储槽位中。
+在这里，我们可以看到变量 a、b 和 c 是如何映射到它们各自的存储槽位的。
 
 ![](https://pbs.twimg.com/media/GJs-fFZasAAQwVl?format=jpg&name=large)
 
-To store variables that require less than 32 bytes of memory in storage, the EVM will pad the values with 0s until all 32 bytes of the slot are used and then store the padded value. Many variable types are smaller than the 32 byte slot size, eg: bool, uint8, and address.
+为了在存储中保存占用少于 32 字节(bytes)的变量，EVM 会用 0 进行填充，直到占满槽位的所有 32 字节(bytes)，然后再将填充后的值写入存储。
+许多变量类型都小于 32 字节(bytes)槽位的大小，例如：`bool`、`uint8` 和 `address`。
 
 ![](https://pbs.twimg.com/media/GJs_0ozasAAZDOP?format=jpg&name=medium)
 
-If we think carefully about the sizes of our contracts’ state variables and their declaration order, the EVM will pack the variables into storage slots to reduce the amount of storage memory that is used.
-Taking the PaddedContract example above we can reorder the declaration of the state variables to get the EVM to tightly pack the variables into storage slots.
-An example of this is shown in the PackedContract which is just a reordering of the variables in the PaddedContract:
+如果我们仔细考虑合约状态变量的大小和声明顺序，EVM 会将变量打包到存储槽位中，以减少使用的存储空间。
+以上面的 PaddedContract 为例，我们可以重新排序状态变量的声明，让 EVM 将变量紧密打包到存储槽位中。
+PackedContract 展示了这个例子，它只是 PaddedContract 中变量的重新排序：
 
 ![](https://pbs.twimg.com/media/GJvVjgRbQAAinx3?format=jpg&name=medium)
 
-However, there's a catch in packing the variables together instead of padding.
-The storage gas savings of tightly packed variables can significantly increase the cost of reading/writing them if the packed variables are not usually used together.
-For example, if we need to read a variable very often without reading its packed partner, it might be best to not tightly pack the variables.
-This is a design consideration developers must take into account when writing contracts.
+然而，将变量打包在一起而不使用填充，也存在一个需要注意的问题。
+如果打包的变量并不是经常一起使用，那么虽然紧密打包可以节省存储占用，但在读取或写入这些变量时，反而可能显著增加 gas 成本。
+例如，如果我们需要经常读取一个变量而不读取打包的另一个变量，那么最好不要紧密打包这些变量。
+这是开发者在编写合约时必须考虑的设计权衡。
 
-### How are mappings stored in smart contract storage?
+### 映射在智能合约存储中是如何存储的？
 
-For mappings, the marker slot only marks the fact that there is a mapping (base slot). To find a value for a given key, the formula keccak256(base slot + key) is used.
-We can understand it better through the following example:
+对于映射(mapping)，标记槽位仅用于标记该 mapping 的存在（即基础槽位 base slot）。
+要查找某个键对应的的值，使用公式 `keccak256(key + base slot)`。
+我们可以通过以下示例更好地理解它：
 
 ![](https://pbs.twimg.com/media/GJvUO6_bUAAkXLp?format=jpg&name=medium)
 
