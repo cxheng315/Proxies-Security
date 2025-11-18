@@ -167,44 +167,44 @@ PackedContract 展示了这个例子，它只是 PaddedContract 中变量的重�
 
 - [OpenZeppelin's Initializable](https://docs.openzeppelin.com/contracts/4.x/api/proxy#Initializable)
 
-## The Upgradeable Proxy
+## 可升级 Proxy
 
-The Upgradeable Proxy is similar to a Proxy, except the implementation contract address is settable and kept in storage in the proxy contract. The proxy contract also contains permissioned upgrade functions. One of the first upgradeable proxy contracts was written by Nick Johnson in 2016.
+可升级代理与普通代理类似，不同之处在于实现合约(implementation contract)地址是可设置的，并保存在代理合约的存储中。代理合约还包含带权限控制的升级函数。最早的可升级代理合约之一由 Nick Johnson 于 2016 年编写。
 
-For security, it is also recommended to use a form of access control to differentiate between the owner/caller and the admin with permission to upgrade the contract.
+出于安全考虑，通常建议使用某种访问控制机制，以区分普通调用者与具有权升级权限的管理员。
 
-**Implementation address** - Located in proxy storage.
+**实现地址** - 位于代理存储中。
 
-**Upgrade logic** - Located in the proxy contract.
+**升级逻辑** - 位于代理合约中。
 
-**Contract verification** - Depending on the exact implementation, it may not work with block explorers like Etherscan.
+**合约验证** - 根据具体实现方式，可能无法在 Etherscan 等区块浏览器上正常验证。
 
-**Use cases**
+**使用场景**
 
--   A minimalistic upgrade contract. Useful for learning projects.
+- 一个极简的可升级合约。适用于学习类项目。
 
-**Pros**
+**优点**
 
--   Reduced deployment costs through use of the Proxy.
--   Implementation contract is upgradeable.
+- 通过代理复用实现合约，可降低部署成本。
+- 实现合约是可升级的。
 
-**Cons**
+**缺点**
 
--   Prone to storage and function clashing.
--   Less secure than modern counterparts.
--   Every call incurs cost of delegatecall from the Proxy.
+- 容易出现存储冲突和函数冲突。
+- 相比现代方案安全性较低。
+- 每次调用都会增加一次 `delegatecall` 的成本。
 
-**Known vulnerabilities**
+**已知漏洞**
 
--   Delegatecall and selfdestruct not allowed in implementation
--   Uninitialized proxy
--   Storage collision
--   Function clashing
+- 实现合约中不允许使用 `delegatecall` 和 `selfdestruct`
+- 未初始化代理
+- 存储冲突
+- 函数冲突
 
-**Further reading**
+**进一步阅读**
 
--   [The First Proxy Contract](https://ethereum-blockchain-developer.com/110-upgrade-smart-contracts/05-proxy-nick-johnson/)
--   [Writing Upgradeable Contracts](https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable)
+- [The First Proxy Contract](https://ethereum-blockchain-developer.com/110-upgrade-smart-contracts/05-proxy-nick-johnson/)
+- [Writing Upgradeable Contracts](https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable)
 
 ## EIP-1967 Upgradeable Proxy
 
