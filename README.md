@@ -45,7 +45,6 @@
 
 每个合约都有自己的存储区域，这是一个持久的可读写存储空间区域。合约只能从自己的存储中读取和写入。合约的存储被划分为 2²⁵⁶ 个槽位，每个槽位为 32 字节(bytes)。所有槽位的初始值均为 0。
 
-### How are state variables stored?
 ### 状态变量是如何存储的？
 
 Solidity 会按照状态变量在合约中声明的顺序，从槽位 0 开始，自动将每个已定义的状态变量映射到存储槽位中。
@@ -59,14 +58,14 @@ Solidity 会按照状态变量在合约中声明的顺序，从槽位 0 开始�
 ![](https://pbs.twimg.com/media/GJs_0ozasAAZDOP?format=jpg&name=medium)
 
 如果我们仔细考虑合约状态变量的大小和声明顺序，EVM 会将变量打包到存储槽位中，以减少使用的存储空间。
-以上面的 PaddedContract 为例，我们可以重新排序状态变量的声明，让 EVM 将变量紧密打包到存储槽位中。
+以上面的 PaddedContract 为例，我们可以重新排序状态变量的声明，让 EVM 将变量打包到存储槽位中。
 PackedContract 展示了这个例子，它只是 PaddedContract 中变量的重新排序：
 
 ![](https://pbs.twimg.com/media/GJvVjgRbQAAinx3?format=jpg&name=medium)
 
 然而，将变量打包在一起而不使用填充，也存在一个需要注意的问题。
-如果打包的变量并不是经常一起使用，那么虽然紧密打包可以节省存储占用，但在读取或写入这些变量时，反而可能显著增加 gas 成本。
-例如，如果我们需要经常读取一个变量而不读取打包的另一个变量，那么最好不要紧密打包这些变量。
+如果打包的变量并不是经常一起使用，那么虽然打包可以节省存储占用，但在读取或写入这些变量时，反而可能显著增加 gas 成本。
+例如，如果我们需要经常读取一个变量而不读取打包的另一个变量，那么最好不要打包这些变量。
 这是开发者在编写合约时必须考虑的设计权衡。
 
 ### 映射在智能合约存储中是如何存储的？
@@ -79,13 +78,13 @@ PackedContract 展示了这个例子，它只是 PaddedContract 中变量的重�
 
 ## `delegatecall`
 
-There exists a special variant of a message call, named `delegatecall` which is identical to a message call apart from the fact that the code at the target address is executed in the context (i.e. at the address) of the calling contract and msg.sender and msg.value do not change their values.
+存在一种名为 `delegatecall` 的特殊消息调用形式。它与普通消息调用几乎相同，不同之处在于：目标地址(target address)中的代码会在调用合约(calling contract)的上下文（即调用者的地址）中执行，并且 `msg.sender` 和 `msg.value` 的值保持不变。
 
-This means that a contract can dynamically load code from a different address at runtime. Storage, current address and balance still refer to the calling contract, only the code is taken from the called address.
+这意味着合约可以在运行时动态加载来自其他地址的代码。存储(storage)、当前地址和余额仍然指向调用合约，只有代码是取自被调用的地址。
 
-This makes it possible to implement the “library” feature in Solidity: Reusable library code that can be applied to a contract’s storage, e.g. in order to implement a complex data structure.
+这使得在 Solidity 中实现"库"(library)功能成为可能：即可复用的库代码可以应用于某个合约的存储，例如用于实现复杂的数据结构。
 
-`delegatecall`, as the name implies, is the calling mechanism of how caller contract calls target contract function but when the target contract executes its logic, the context is not on the user who executed the caller contract but on the caller contract.
+`delegatecall`，顾名思义，是一种调用机制。调用者合约通过它来调用目标合约中的函数，但当目标合约执行其逻辑时，执行上下文并不是发起调用的用户，而是调用者合约本身。
 
 ![](https://pbs.twimg.com/media/GMMgUtibMAAJPsi?format=jpg&name=medium)
 
