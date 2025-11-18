@@ -88,17 +88,18 @@ PackedContract 展示了这个例子，它只是 PaddedContract 中变量的重�
 
 ![](https://pbs.twimg.com/media/GMMgUtibMAAJPsi?format=jpg&name=medium)
 
-Then when contract `delegatecall` to target, how the state of storage would be changed?
 
-Because when `delegatecall` to target, the context is on Caller contract, all state change logics reflect on Caller’s storage.
+因为在使用 `delegatecall` 调用目标合约时，执行上下文在调用者合约上，因此所有状态变更逻辑都会反映在调用者的存储上。
 
-For example, let there is Proxy contract and Business contract. Proxy contract `delegatecall` to Business contract function. If the user calls Proxy contract, Proxy contract will `delegatecall` to Business contract and function would be executed. But all state changes will be reflected Proxy contract storage, not a Business contract.
+例如，假设有代理(Proxy)合约和逻辑(Business)合约。代理合约 `delegatecall` 到逻辑合约函数。如果用户调用代理合约，代理合约将 `delegatecall` 到逻辑合约，函数将被执行。但所有状态变更都将反映在代理合约存储中，而不是逻辑合约。
 
-### Comparison between Callcode and Delegatecall
+### Callcode 和 Delegatecall 的比较
 
 ![](https://proxies.yacademy.dev/assets/images/Comparison_Callcode_Delegatecall.png)
 
-Both `callcode` and `delegatecall` have the same behavior on storage. That is, both of them can execute the implementation’s code and perform operations with proxy’s storage. The difference between them is in msg.value and msg.sender. In `callcode`, msg.value can be customized to hold a new value in the implementation contract and msg.sender is changed to Proxy’s address. In `delegatecall`, both msg.value and msg.sender remain the same in the proxy and implementation contracts.
+`callcode` 和 `delegatecall` 在存储上具有相同的行为。也就是说，它们都可以执行实现合约(implementation)的代码并对代理合约(proxy)的存储进行操作。它们之间的区别在于 `msg.value` 和 `msg.sender`。
+在 `callcode` 中，`msg.value` 可以在实现合约中被自定义为新的值，`msg.sender` 会被改为代理合约的地址。
+在 `delegatecall` 中，`msg.value` 和 `msg.sender` 在代理合约和实现合约中都保持不变。
 
 ## Proxy Patterns
 
