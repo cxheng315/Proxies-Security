@@ -88,6 +88,7 @@ PackedContract 展示了这个例子，它只是 PaddedContract 中变量的重�
 
 ![](https://pbs.twimg.com/media/GMMgUtibMAAJPsi?format=jpg&name=medium)
 
+那么当合约使用 `delegatecall` 调用目标合约时，存储状态将会如何发生变化呢？
 
 因为在使用 `delegatecall` 调用目标合约时，执行上下文在调用者合约上，因此所有状态变更逻辑都会反映在调用者的存储上。
 
@@ -101,40 +102,40 @@ PackedContract 展示了这个例子，它只是 PaddedContract 中变量的重�
 在 `callcode` 中，`msg.value` 可以在实现合约中被自定义为新的值，`msg.sender` 会被改为代理合约的地址。
 在 `delegatecall` 中，`msg.value` 和 `msg.sender` 在代理合约和实现合约中都保持不变。
 
-## Proxy Patterns
+## Proxy 模式
 
-## The Minimal Proxy
+## 最简 Proxy
 
-The proxy itself is not inherently upgradeable, but it is the basis for just about all upgradeable proxy patterns. Calls made to the proxy contract are forwarded to the implementation contract using delegatecall. The implementation contract is also referred to as the logic contract.
+代理合约(proxy)本身并不是天然可升级的，但它是几乎所有可升级代理模式的基础。对代理合约发起的调用会通过 `delegatecall` 被转发到实现(implementation)合约。实现合约也被称为逻辑合约。
 
-In some variants, calls to the proxy are only forwarded if the caller matches an “owner” address.
+在某些变体中，只有当调用者与指定的"所有者"地址匹配时，代理才会转发调用。
 
-**Implementation address** - Immutable in the proxy contract.
+**实现地址** - 在代理合约中不可变。
 
-**Upgrade logic** - There is no upgradeability in a pure proxy contract.
+**升级逻辑** - 纯代理合约不具备可升级性。
 
-**Contract verification** - Works with Etherscan and other block explorers.
+**合约验证** - 可在 Etherscan 等区块浏览器上正常验证。
 
-**Use cases**
+**使用场景**
 
--   Useful when there is a need to deploy multiple contracts whose code is more or less the same.
+- 适用于需要部署多个代码基本相同的合约的情况。
 
-**Pros**
+**优点**
 
--   Inexpensive deployment.
+- 部署成本低。
 
-**Cons**
+**缺点**
 
--   Adds a single delegatecall cost to each call.
+- 每次调用都会增加一次 `delegatecall` 的成本。
 
-**Examples**
+**示例**
 
--   Uniswap V1 AMM pools
--   Synthetix
+- Uniswap V1 AMM 池
+- Synthetix
 
-**Known vulnerabilities**
+**已知漏洞**
 
--   Delegatecall and selfdestruct not allowed in implementation.
+- 实现合约中不允许使用 `delegatecall` 和 `selfdestruct`。
 
 ## The Initializeable Proxy
 
