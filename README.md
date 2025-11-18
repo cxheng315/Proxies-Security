@@ -137,35 +137,35 @@ PackedContract 展示了这个例子，它只是 PaddedContract 中变量的重�
 
 - 实现合约中不允许使用 `delegatecall` 和 `selfdestruct`。
 
-## The Initializeable Proxy
+## 可初始化 Proxy
 
-Most modern day proxies are initializeable. One of the main benefits of using a proxy is that you only have to deploy the implementation contract (AKA the logic contract) once, and then you can deploy many proxy contracts that point at it. However, the downside to this is that you cannot use a constructor in the already deployed implementation contract when creating the new proxy.
+大多数现代代理(proxy)都是可初始化的。使用代理的主要优势之一是，您只需要部署一次实现合约（也称为逻辑合约），然后可以部署许多指向它的代理合约。然而，这样做的缺点是，在创建新的代理时，您无法在已部署的实现合约中使用构造函数(constructor)。
 
-Instead, an `initialize()` function is used to set initial storage values.
+为了解决这个问题，会使用 `initialize()` 函数来设置初始存储值。
 
-**Use cases**
+**使用场景**
 
--   Most proxies with any kind of storage that needs to be set upon proxy contract deployment.
+- 适用于在代理合约部署时需要设置存储的多数代理模式。
 
-**Pros**
+**优点**
 
--   Allows initial storage to be set at time of new proxy deployment.
+- 允许在新代理部署时设置初始存储。
 
-**Cons**
+**缺点**
 
--   Susceptible to attacks related to initialization, especially uninitialized proxies.
+- 易受到与初始化相关的攻击，特别是未初始化的代理。
 
-**Examples**
+**示例**
 
--   This feature is used with most modern proxy types including TPP and UUPS, except for use cases where there is no need to set storage upon proxy deployment.
+- 此功能用于大多数现代代理类型，例如 [TPP](#透明-proxy-模式-tpp) 和 [UUPS](#通用可升级-proxy-标准-uups)，除了在代理部署时不需要设置存储的使用场景。
 
-**Known vulnerabilities**
+**已知漏洞**
 
--   Uninitialized proxy
+- 未初始化代理
 
-**Further Reading**
+**进一步阅读**
 
--   [OpenZeppelin's Initializable](https://docs.openzeppelin.com/contracts/4.x/api/proxy#Initializable)
+- [OpenZeppelin's Initializable](https://docs.openzeppelin.com/contracts/4.x/api/proxy#Initializable)
 
 ## The Upgradeable Proxy
 
