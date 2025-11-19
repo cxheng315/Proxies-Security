@@ -529,17 +529,18 @@ Diamond 代理的术语表使用了一套独特的专业词汇：
 
 ![](/public/4.png)
 
-## Security Guide to Proxy Vulnerabilities
+## Proxy 漏洞安全指南
 
-### 1. Delegatecall to non-existent external contract
+### 1. 对不存在的外部合约执行 Delegatecall
 
-There isn't an automatic process to verify if the external contract is present when `delegatecall` is utilized. The return value will be true in the event that the external contract invoked is not present. [This is noted in the solidity documentation](https://docs.soliditylang.org/en/latest/control-structures.html#error-handling-assert-require-revert-and-exceptions) in a cautionary note along with the following information:
+在使用 `delegatecall` 时，EVM 不会自动验证外部合约是否存在。如果调用的外部合约不存在，返回值将为 `true`。[Solidity 文档中已对此给出了警告说明](https://docs.soliditylang.org/en/latest/control-structures.html#error-handling-assert-require-revert-and-exceptions)，其中提到：
 
-The low-level functions call, `delegatecall` and staticcall return true as their first return value if the account called is non-existent, as part of the design of the EVM. Account existence must be checked prior to calling if needed.
+> 低级函数 `call`、`delegatecall` 和 `staticcall` 在调用的账户不存在时，会将第一个返回值设为 `true`，这是 EVM 的设计行为。因此，如果需要确保账户存在，必须在调用前先进行检查。
 
-**Testing procedure**
+**测试步骤**
 
-Determining the external contract address that the call is using is the first step. `delegatecall` may return true unexpectedly if there is a chance that there isn't a contract at this address and no check is made to make sure the contract is in place before the `delegatecall`.
+第一步是确定 `delegatecall` 实际调用的外部合约地址。
+如果目标地址可能不存在合约，而在调用 `delegatecall` 之前又没有检查该合约是否部署，则 `delegatecall` 可能会意外返回 `true`，导致错误行为未被发现。
 
 ### 2. Delegatecall with Selfdestruct Vulnerability
 
