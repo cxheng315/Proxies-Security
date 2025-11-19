@@ -399,46 +399,46 @@ UUPS 代理在升级时还包含一个额外的检查，确保新的实现合约
 
 ## Beacon Proxy
 
-Most proxies discussed so far store the implementation contract address in the proxy contract storage. The Beacon pattern stores the address of the implementation contract in a separate “beacon” contract. The address of the beacon is stored in the proxy contract using EIP-1967 storage pattern.
+截至目前为止讨论的大多数代理都将实现合约地址存储在代理合约存储中。Beacon 模式将实现合约的地址存储在独立的"beacon"合约中。Beacon 地址使用 EIP-1967 存储模式存储在代理合约中。
 
-With other types of proxies, when the implementation contract is upgraded, all of the proxies need to be updated. However, with the Beacon proxy, only the beacon contract itself needs to be updated.
+对于其他类型的代理，每次升级实现合约都需要逐一更新所有代理。但对于 Beacon 代理，只需要更新 Beacon 合约本身，所有基于该 Beacon 的代理都会自动指向新实现，极大减少操作量。
 
-Both the beacon address on the proxy as well as the implementation contract address on the beacon are settable by admin. This allows for many powerful combinations when dealing with large quantities of proxy contracts that need to be grouped in different ways.
+代理上的 Beacon 地址以及 Beacon 上的实现合约地址都可以由管理员设置。这在需要管理大量代理，并以不同方式对其分组时非常有用。
 
-The main idea behind the beacon contract is re-usability. If you have several proxies pointing to the same logic contract address then, every time you want to update the logic contract, you'd have to update all proxies. As this can become gas intensive, it would make more sense to have a beacon contract that returns the address of the logic contract for all proxies.
+Beacon 合约背后的核心理念是可复用性。如果多个代理指向同一个逻辑合约地址，那么每次更新逻辑合约时，都必须更新所有代理。这在 gas 成本上极其昂贵。那么拥有一个为所有代理返回逻辑合约地址的 Beacon 合约会更有意义。
 
-So, if you use beacons, you are having another layer of Smart Contract in between that returns the address of the actual logic contract.
+因此，使用 Beacon 时，相当于在中间有另一层智能合约，它返回实际逻辑合约的地址。
 
-**Implementation address** - Located in a unique storage slot in the beacon contract. The beacon address lives in a unique storage slot in the proxy contract.
+**实现地址** - 位于 Beacon 合约中的唯一存储槽。Beacon 地址位于代理合约中的唯一存储槽。
 
-**Upgrade logic** - Upgrade logic typically lives in the beacon contract.
+**升级逻辑** - 升级逻辑通常位于 Beacon 合约中。
 
-**Contract Verification** - Yes, most EVM block explorers support it.
+**合约验证** - 是的，大多数 EVM 区块浏览器都支持验证。
 
-**Use cases**
+**使用场景**
 
--   If there are multiple proxy contracts that can all be upgraded at once by upgrading the beacon.
--   Appropriate for situations that involve large amounts of proxy contracts based on multiple implementation contracts. The beacon proxy pattern enables updating various groups of proxies at the same time.
+- 当多个代理合约可以通过升级 Beacon 同时升级。
+- 适用于涉及基于多个实现合约的大量代理合约的情况。Beacon 代理允许同时更新多个代理组。
 
-**Pros**
+**优点**
 
--   Easier to upgrade multiple proxy contracts at the same time.
+- 能够轻松同时升级多个代理合约。
 
-**Cons**
+**缺点**
 
--   Gas overhead of getting the beacon contract address from storage, calling beacon contract, and then getting the implementation contract address from storage, plus the extra gas required by using a proxy.
--   Adds additional complexity.
+- 从存储中获取 Beacon 合约地址、调用 Beacon 合约、然后从存储中获取实现合约地址的 gas 开销，以及使用代理所需的额外 gas。
+- 增加了系统各复杂度。
 
-**Examples**
+**示例**
 
--   USDC
--   Dharma
+- USDC
+- Dharma
 
-**Known vulnerabilities**
+**已知漏洞**
 
--   Delegatecall and selfdestruct not allowed in implementation
--   Uninitialized proxy
--   Function clashing
+- 实现合约中不允许使用 `delegatecall` 和 `selfdestruct`
+- 未初始化代理
+- 函数冲突
 
 ## Diamond Proxy
 
