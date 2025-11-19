@@ -442,74 +442,86 @@ Beacon 合约背后的核心理念是可复用性。如果多个代理指向同�
 
 ## Diamond Proxy
 
-[EIP-2535](https://eips.ethereum.org/EIPS/eip-2535) “Diamonds” are modular smart contract systems that can be upgraded/extended after deployment, and have virtually no size limit. From the EIP:
+[EIP-2535](https://eips.ethereum.org/EIPS/eip-2535) "Diamonds" 是一种模块化智能合约系统，可在部署后进行升级或扩展，并几乎不存在代码大小限制。
+EIP 中的定义如下：
 
-"a diamond is a contract with external functions that are supplied by contracts called facets. Facets are separate, independent contracts that can share internal functions, libraries, and state variables."
+> Diamond 是一个具有外部函数的合约，这些外部函数由称为 _facets_ 的合约提供。
+> Facets 是独立的合约，它们可以共享内部函数、库和状态变量。
 
-The diamond pattern consists of a central Diamond.sol proxy contract. In addition to other storage, this contract contains a registry of functions that can be called on external contracts called facets.
+Diamond 模式由一个核心的 `Diamond.sol` 代理合约组成。除了其他存储外，此合约包含一个函数注册表，这些函数可以在被称为 `facets` 的外部合约上调用。
 
-Glossary of Diamond proxy uses a unique vocabulary:
+Diamond 代理的术语表使用了一套独特的专业词汇：
 
 ![](./public/3.png)
 
-This standard is an improvement of [EIP-1538](https://eips.ethereum.org/EIPS/eip-1538) (TPP). The same motivations of that standard apply to this standard.
+此标准是对 [EIP-1538](https://eips.ethereum.org/EIPS/eip-1538) (TPP) 的改进，其设计动机也与之相同。
 
-A deployed facet can be used by any number of diamonds.
+一个已部署的 facet 可以被任意数量的 diamonds 使用。
 
-The diagram below shows two diamonds using the same two facets.
+下图展示了两个 diamonds 共享两个 facets 的情况：
 
--   FacetA is used by Diamond1
+- FacetA 被 Diamond1 使用
 
--   FacetA is used by Diamond2
+- FacetA 被 Diamond2 使用
 
--   FacetB is used by Diamond1
+- FacetB 被 Diamond1 使用
 
--   FacetB is used by Diamond2
+- FacetB 被 Diamond2 使用
 
 ![](https://eips.ethereum.org/assets/eip-2535/facetreuse.png)
 
-### Terms
+### 术语
 
-1. A diamond is a facade smart contract that delegatecalls into its facets to execute function calls. A diamond is stateful. Data is stored in the contract storage of a diamond.
+1. Diamond
+   是一个门面(facade)智能合约，通过 `delegatecall` 调用其 facets 中的函数。
+   Diamond 是有状态的。数据存储在 diamond 合约的存储中。
 
-2. A facet is a stateless smart contract or Solidity library with external functions. A facet is deployed and one or more of its functions are added to one or more diamonds. A facet does not store data within its own contract storage but it can define state and read and write to the storage of one or more diamonds. The term facet comes from the diamond industry. It is a side, or flat surface of a diamond.
+2. Facet
+   是一个无状态的智能合约或具有外部函数的 Solidity 库。
+   Facet 部署后，其一个或多个函数可以被添加到一个或多个 diamonds 中。
+   Facet 自身不会在其合约存储中保存数据，但可以定义状态并读写任意 diamond 的存储。
+   术语 _facet_ 来自钻石行业。它是钻石的一个侧面或平面。
 
-3. A loupe facet is a facet that provides introspection functions. In the diamond industry, a loupe is a magnifying glass that is used to look at diamonds.
+3. Loupe facet
+   提供内省(introspection)函数的 facet。
+   在钻石行业中，loupe 是用于查看钻石的放大镜。
 
-4. An immutable function is an external function that cannot be replaced or removed (because it is defined directly in the diamond, or because the diamond’s logic does not allow it to be modified).
+4. 不可变函数(Immutable function)
+   指无法被替换或移除的外部函数（因为它直接在 diamond 中定义，或者因为 diamond 的逻辑不允许修改它）。
 
-5. A mapping for the purposes of this EIP is an association between two things and does not refer to a specific implementation.
+5. Mapping(在本 EIP 中)，
+   映射是两个事物之间的关联，不指特定的实现。
 
-**Contract Verification** - Contracts can be verified on Etherscan with the help of a tool called Louper.
+**合约验证** - 可以使用 Louper 工具在 Etherscan 上验证合约。
 
-**Use cases**
+**使用场景**
 
--   A complex system where the highest level of upgradeability and modular interoperability is required.
+- 适用于需要最高级别可升级性与模块化互操作性的复杂系统。
 
-**Pros**
+**优点**
 
--   A stable contract address that provides needed functionality. Emitting events from a single address can simplify event handling.
--   Can be used to break up a large contract > 24kb that is over the Spurious Dragon limit.
+- 提供一个稳定且长久可用的合约地址。从单一地址发出事件(event)可以简化事件处理。
+- 可用于拆分超过 Spurious Dragon 限制(24kb)的大型合约。
 
-**Cons**
+**缺点**
 
--   Additional gas required to access storage when routing functions.
--   Increased chance of storage collision due to complexity.
--   Complexity may be too much when simple upgradeability is required.
+- 函数路由需要额外访问存储，导致 gas 成本增加。
+- 系统结构复杂，存储冲突风险上升。
+- 对仅需简单可升级性的场景，复杂性可能过高。
 
-**Examples**
+**示例**
 
--   Simple DeFi
--   PartyFinance
+- Simple DeFi
+- PartyFinance
 
-**Known vulnerabilities**
+**已知漏洞**
 
--   Delegatecall and selfdestruct not allowed in implementation
+- 实现合约中不允许使用 `delegatecall` 和 `selfdestruct`
 
-Further reading
+**进一步阅读**
 
--   [Introduction to EIP-2535 Diamonds](https://eip2535diamonds.substack.com/p/introduction-to-the-diamond-standard)
--   [Dark Forest and the Diamond standard](https://blog.zkga.me/dark-forest-and-the-diamond-standard)
+- [Introduction to EIP-2535 Diamonds](https://eip2535diamonds.substack.com/p/introduction-to-the-diamond-standard)
+- [Dark Forest and the Diamond standard](https://blog.zkga.me/dark-forest-and-the-diamond-standard)
 
 ### Comparing Proxy Patterns
 
