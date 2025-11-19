@@ -347,55 +347,55 @@ Solidity 编译器会在同一个合约内部侦测并报告这样的冲突，�
 
 - [ERC-1538: Transparent Contract Standard](https://eips.ethereum.org/EIPS/eip-1538)
 
-## Universal Upgradeable Proxy Standard (UUPS)
+## 通用可升级 Proxy 标准 (UUPS)
 
-What if we move the upgrade logic to the implematation contract?
+如果我们将升级逻辑移到实现合约中会怎样？
 
-[EIP-1822](https://eips.ethereum.org/EIPS/eip-1822) describes a standard for an upgradeable proxy pattern where the upgrade logic is stored in the implementation contract. This way, there is no need to check if the caller is admin in the proxy at the proxy level, saving gas. It also eliminates the possibility of a function on the implementation contract colliding with the upgrade logic in the proxy.
+[EIP-1822](https://eips.ethereum.org/EIPS/eip-1822) 描述了一种可升级代理模式的标准，其中升级逻辑存储在实现合约内。这样代理就不需要检查调用者是否为管理员，从而节省 gas。同时，也消除了实现合约中的函数与代理中升级逻辑发生冲突的可能性。
 
-The downside of UUPS is that it is considered riskier than TPP. If the proxy does not get initialized properly or if the implementation contract were to selfdestruct, then there is no way to save the proxy since the upgrade logic lives on the implementation contract.
+UUPS 的缺点是它被认为比 TPP 风险更大。如果代理未正确初始化，或实现合约被 `selfdestruct`，那么就没有办法拯救代理，因为升级逻辑位于实现合约里。
 
-The UUPS proxy also contains an additional check when upgrading that ensures the new implementation contract is upgradeable.
+UUPS 代理在升级时还包含一个额外的检查，确保新的实现合约是可升级的。
 
-This proxy contract usually incorporates EIP-1967.
+此代理合约通常也会 EIP-1967 的存储槽位。
 
-**Implementation address** - Located in a unique storage slot in the proxy contract (EIP-1967).
+**实现地址** - 位于代理合约中的唯一存储槽位（EIP-1967）。
 
-**Upgrade logic** - Located in the implementation contract.
+**升级逻辑** - 位于实现合约中。
 
-**Contract verification** - Yes, most EVM block explorers support it.
+**合约验证** - 是的，大多数 EVM 区块浏览器都支持验证。
 
-**Use cases**
+**使用场景**
 
--   Currently, this is the most widely used pattern to deploy upgradeable contracts.
+- 目前最广泛采用的可升级合约模式。
 
-**Pros**
+**优点**
 
--   Eliminates risk of functions on the implementation contract colliding with the proxy contract since the upgrade logic lives on the implementation contract and there is no logic on the proxy besides the fallback() which delegatecalls to the impl contract.
--   Reduced runtime gas over TPP because the proxy does not need to check if the caller is admin.
--   Reduced cost of deploying a new proxy because the proxy only contains no logic besides the fallback().
--   Reduces risk of storage collisions from use of EIP-1967 storage slots.
--   Block explorer compatibility.
+- 消除实现合约中的函数与代理合约冲突的风险，因为升级逻辑存在于实现合约，代理除了 `delegatecall` 到实现合约的 `fallback()` 之外没有其他逻辑。
+- 与 TPP 相比，运行时 gas 更低，因为代理不再需要检查调用者是否为管理员。
+- 部署新代理的成本降低，因为代理只包含 `fallback()`，没有其他逻辑。
+- 使用 EIP-1967 的存储槽位可降低存储冲突风险。
+- 区块浏览器兼容性。
 
-**Cons**
+**缺点**
 
--   Because the upgrade logic lives on the implementation contract, extra care must be taken to ensure the implementation contract cannot selfdestruct or get left in a bad state due to an improper initialization.
--   Still incurs cost of delegatecall from the Proxy.
+- 由于升级逻辑存在于实现合约，必须格外小心，确保实现合约不能 `selfdestruct` 或由于初始化不当而处于不良状态。
+- 所有调用仍会产生 `delegatecall` 的成本。
 
-**Examples**
+**示例**
 
--   Superfluid
--   Synthetix
+- Superfluid
+- Synthetix
 
-**Known vulnerabilities**
+**已知漏洞**
 
--   Uninitialized proxy
--   Function clashing
--   Selfdestruct
+- 未初始化代理
+- 函数冲突
+- `selfdestruct`
 
-**Further reading**
+**进一步阅读**
 
--   [EIP-1822](https://eips.ethereum.org/EIPS/eip-1822)
+- [EIP-1822](https://eips.ethereum.org/EIPS/eip-1822)
 
 ## Beacon Proxy
 
