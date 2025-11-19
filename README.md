@@ -567,17 +567,27 @@ Diamond 代理的术语表使用了一套独特的专业词汇：
 
 1. [OpenZeppelin's Proxy Vulnerability](https://github.com/OpenZeppelin/openzeppelin-contracts/security/advisories/GHSA-5vp3-v4hc-gx76)
 
-### 3. Function Clashing Vulnerability
+### 3. 函数冲突漏洞
 
-Function clashing occurs when compiled smart contracts use a function selector, which is a 4-byte identifier that is obtained from the hash of the function name, to identify functions. When the first 32 bits of two functions' hashes match, they can have identical 4-byte identifiers despite having different names. The compiler will identify instances in which a 4 byte function selector appears twice in a single contract, but it won't stop it from happening in separate project contracts.
+当编译后的智能合约使用函数选择器(function selector)来标识函数时，就可能发生函数冲突。函数选择器是依据函数名称与参数列表哈希所得的前 4 个字节(byte)。如果两个不同函数的哈希前 32 位一致，那么它们会生成相同的 4 字节选择器，即便名称完全不同。
 
-Most proxy types exhibit function clashing, although not all of them do. Because all of the custom functions are stored in the implementation contract, UUPS proxies in particular are typically not susceptible to function clashing.
+编译器会检测同一合约中重复的函数选择器，但如果冲突发生在不同的合约之间(例如代理与实现合约之间)，编译器无法阻止。
+大多数代理都可能出现函数冲突，但并非全部如此。尤其是 UUPS 代理，由于所有自定义逻辑都集中在实现合约中，因此通常不容易受到函数选择器冲突的影响。
 
-**Testing procedure**
+**测试步骤**
 
-To test for this vulnerability, you can collect the function selectors of a proxy contract and implementation contract to compare them for any function clashing. One tool for this is solc, where solc --hashes MyContract.sol will list all function selectors. Slither has a [Slither’s Function ID printer](https://github.com/crytic/slither/wiki/Printer-documentation#function-id) that can do the same thing. Slither also has a slither-check-upgradeability tool that can [detect function clashing](https://github.com/crytic/slither/wiki/Upgradeability-Checks#functions-ids-collisions).
+要测试此漏洞，你可以收集代理合约和实现合约的函数选择器，并比较它们是否存在冲突。
 
-**Further Reading**
+常用工具包括：
+
+- solc
+  `solc --hashes MyContract.sol` 将列出所有函数选择器。
+- [Slither - Function ID printer](https://github.com/crytic/slither/wiki/Printer-documentation#function-id)
+  可输出所有函数 ID。
+- [Slither Check Upgradeability](https://github.com/crytic/slither/wiki/Upgradeability-Checks#functions-ids-collisions)
+  可直接检测代理相关的函数冲突。
+
+**进一步阅读**
 
 1. [Tincho Function Clashing Writeup](https://forum.openzeppelin.com/t/beware-of-the-proxy-learn-how-to-exploit-function-clashing/1070)
 2. [Nomic Labs' Blog Post](https://medium.com/nomic-foundation-blog/malicious-backdoors-in-ethereum-proxies-62629adf3357)
