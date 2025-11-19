@@ -542,21 +542,28 @@ Diamond 代理的术语表使用了一套独特的专业词汇：
 第一步是确定 `delegatecall` 实际调用的外部合约地址。
 如果目标地址可能不存在合约，而在调用 `delegatecall` 之前又没有检查该合约是否部署，则 `delegatecall` 可能会意外返回 `true`，导致错误行为未被发现。
 
-### 2. Delegatecall with Selfdestruct Vulnerability
+### 2. Delegatecall 与 Selfdestruct 漏洞
 
-When `selfdestruct` and `delegatecall` are used together, unforeseen edge cases can occur. In particular, contract A will be destroyed if contract B contains `selfdestruct` in its function and contract A has a `delegatecall` to it.
+当 `selfdestruct` 与 `delegatecall` 同时使用时，可能会出现不可预见的边缘情况(edge case)。特别是，如果合约 B 中的某个函数包含 `selfdestruct`，而合约 A 通过 `delegatecall` 调用该函数，那么被销毁的将是合约 A 本身。
 
-**Testing procedure**
+**测试步骤**
 
-It is simple to recognize this weakness. First, there is a significant overall security risk if a contract has a `delegatecall` that delegates to a user-provided address (like a function parameter in an external function).
+识别此类漏洞相对简单。
 
-Verify whether the target contract has a `selfdestruct` if a contract has a `delegatecall` to a hardcoded target contract. Check the contract to which the delegation is assigned for a `selfdestruct` (and carry on if another `delegatecall` is discovered) if the destination contract has a `delegatecall` but no `selfdestruct`. The original contract containing the `delegatecall` may be deleted if the target contract has a `selfdestruct` clause. Every clone made from this master contract will self-destruct if the EIP-1167 cloning master contract is employed.
+1. 若合约包含 `delegatecall` 到用户提供的目标地址（例如作为外部函数的参数），则存在重大的整体安全风险。
+2. 若 `delegatecall` 到硬编码的目标合约
 
-**CTF Example**
+   - 检查目标合约是否有 `selfdestruct`。
+   - 若目标合约没有 `selfdestruct`，但有进一步的 `delegatecall` ，则继续沿着 `delegatecall` 路径检查。
+   - 一旦链路中的任意合约包含 `selfdestruct` ，则最初发出 `delegatecall` 的合约可能会被删除。
 
-1. [Ethernaut Level 25 “Motorbike”](https://ethernaut.openzeppelin.com/level/0x3A78EE8462BD2e31133de2B8f1f9CBD973D6eDd6)
+3. 如果使用 EIP-1167 最小代理模式，那么由该主合约克隆出的所有代理实例都有可能被销毁。
 
-**Further Reading**
+**CTF 示例**
+
+1. [Ethernaut Level 25 "Motorbike"](https://ethernaut.openzeppelin.com/level/0x3A78EE8462BD2e31133de2B8f1f9CBD973D6eDd6)
+
+**进一步阅读**
 
 1. [OpenZeppelin's Proxy Vulnerability](https://github.com/OpenZeppelin/openzeppelin-contracts/security/advisories/GHSA-5vp3-v4hc-gx76)
 
