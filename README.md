@@ -523,9 +523,9 @@ Diamond 代理的术语表使用了一套独特的专业词汇：
 - [Introduction to EIP-2535 Diamonds](https://eip2535diamonds.substack.com/p/introduction-to-the-diamond-standard)
 - [Dark Forest and the Diamond standard](https://blog.zkga.me/dark-forest-and-the-diamond-standard)
 
-### Comparing Proxy Patterns
+### 比较 Proxy 模式
 
-The below table compares the pros and cons of the diamond, transparent, and UUPS proxy patterns:
+下表对比了 Diamond、Transparent 和 UUPS 三种代理模式的优缺点：
 
 ![](/public/4.png)
 
