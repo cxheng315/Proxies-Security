@@ -269,7 +269,7 @@ OpenZeppelin 合约使用 keccak256("eip1967.proxy.implementation") - 1\*作为�
 
 **已知漏洞**
 
-- 实现中不允许 `delegatecall` 和 `selfdestruct`
+- 实现合约中不允许使用 `delegatecall` 和 `selfdestruct`
 - 未初始化代理
 - 函数冲突
 
@@ -278,66 +278,74 @@ OpenZeppelin 合约使用 keccak256("eip1967.proxy.implementation") - 1\*作为�
 - [EIP-1967 Standard Proxy Storage Slots](https://ethereum-blockchain-developer.com/110-upgrade-smart-contracts/09-eip-1967/)
 - [The Proxy Delegate](https://fravoll.github.io/solidity-patterns/proxy_delegate.html)
 
-## Transparent Proxy Pattern (TPP)
+## 透明 Proxy 模式 (TPP)
 
-**Note** - This is replaced by [EIP-2535 Diamond Standard](https://eips.ethereum.org/EIPS/eip-2535).
+**注意** - 这模式已被 [EIP-2535 Diamond Standard](https://eips.ethereum.org/EIPS/eip-2535) 所取代。
 
-This is the “solution” to function clashing.
+这是函数冲突的"解决方案"。
 
-As explained, proxies work by delegating all calls to a logic contract that holds the actual code to be executed. Nevertheless, upgradeable proxies require certain functions for management of the proxy itself. At the very least, an ​upgradeTo(address newImplementation) function is needed in order to be able to upgrade the proxy to a new logic contract.
+如前所述，代理通过 `delegatecall` 将所有调用转发到逻辑合约(logic contract)，逻辑合约执行实际的代码。
+然而，可升级代理自身需要一些管理函数，例如用于将代理升级到新的逻辑合约的函数：
 
-This raises the question of how to proceed if the logic contract also has a function with the same name and signature. Upon a call to upgradeTo, did the caller intend to call the proxy management function or the logic contract? This ambiguity can lead to unintended errors, or even malicious exploits.
+```solidity
+upgradeTo(address newImplementation)
+```
 
-The clashing can also happen among functions with different names. Every function that is part of a contract’s public interface is identified at the bytecode level by a short 4-byte identifier. This identifier depends on the name and arity of the function, but since it’s only 4 bytes, there’s a possibility that two different functions with different names may end up actually having the same identifier. The Solidity compiler tracks when this happens within the same contract, but not when the collision happens across different ones, such as between a proxy and its logic contract.
+这就提出了一个问题：如果逻辑合约也有一个同名和同签名的函数，该怎么办？
+在调用 `upgradeTo` 时，调用者是打算调用代理的管理函数或逻辑合约的函数？
+这种歧义可能导致意外的错误，甚至被恶意利用。
 
-**The solution**
+冲突也可能发生在名称不同的函数之间。作为合约公共接口的一部分，每个函数在字节码层面都会以一个 4 字节(byte)的标识符(function selector)来识别。该标识符由函数名称与参数列表组合计算而成，但由于它只有 4 字节，两个不同名称的不同参数的函数也有可能碰巧得到相同的值。
+Solidity 编译器会在同一个合约内部侦测并报告这样的冲突，但如果冲突发生在不同合约之间(例如代理合约与逻辑合约之间)，编译器无法自动发现。
 
-The way we deal with this problem is via the transparent proxy pattern. The goal of a transparent proxy is to be indistinguishable by a user from the actual logic contract. This means that a user calling upgradeTo on a proxy should always end up executing the function in the logic contract, not the proxy management function.
+**解决方案**
 
-How do we allow proxy management, then? The answer is based on the message sender. A transparent proxy will decide which calls are delegated to the underlying logic contract based on the caller address:
+我们通过透明代理模式来处理这个问题。透明代理的目标是让用户感知不到代理的存在，使其看起来就像在与实际的逻辑合约交互。因此，当用户在代理上调用 `upgradeTo` 时，应该始终执行逻辑合约中的函数，而不是代理管理函数。
 
--   If the caller is the admin of the proxy, the proxy will not delegate any calls, and will only answer management messages it understands.
--   If the caller is any other address, the proxy will always delegate the call, no matter if it matches one of the proxy’s own functions.
+那么，我们如何允许管理代理合约呢？答案是基于消息发送者(`msg.sender`)。透明代理将根据调用者地址决定哪些调用被委托给底层逻辑合约：
 
-This is similar to the Upgradeable Proxy and usually incorporates EIP-1967, but, if the caller is the admin of the proxy, the proxy will not delegate any calls, and if the caller is any other address, the proxy will always delegate the call, even if the function signature matches one of the proxy’s own functions.
+- 如果调用者是代理的管理员，代理将不会委托任何调用，只会处理自己具备的管理函数。
+- 如果调用者是任何其他地址，代理将始终委托调用，即使它匹配代理自己的函数之一。
 
-**Implementation address** - Located in a unique storage slot in the proxy contract (EIP-1967).
+该模式通常搭配 EIP-1967 存储槽位来管理实现地址和管理员地址。
 
-**Upgrade logic** - Located in the proxy contract with use of a modifier to re-route non-admin callers.
+**实现地址** - 位于代理合约中的唯一存储槽位（EIP-1967）。
 
-**Contract verification** - Yes, most EVM block explorers support it.
+**升级逻辑** - 位于代理合约中，使用修饰符(modifier)判读调用者是否管理员，以确定是否 `delegatecall`
 
-**Use cases**
+**合约验证** - 是的，大多数 EVM 区块浏览器都支持验证。
 
--   This pattern is very widely used for its upgradeability and protections against certain function and storage collision vulnerabilities.
+**使用场景**
 
-**Pros**
+- 广泛用于需要可升级性且避免函数冲突、存储冲突风险的项目
 
--   Eliminates possibility of function clashing for admins, since they are never redirected to the implementation contract.
--   Since the upgrade logic lives on the proxy, if a proxy is left in an uninitialized state or if the implementation contract is selfdestructed, then the implementation can still be set to a new address.
--   Reduces risk of storage collisions from use of EIP-1967 storage slots.
--   Block explorer compatibility.
+**优点**
 
-**Cons**
+- 解决管理员函数冲突的问题(管理员永远不会被 `delegatecall` 到逻辑合约)
+- 由于升级逻辑存在于代理本身，即使代理未初始化或实现合约被 `selfdestruct`，仍然可以重新设置新的实现地址。
+- 使用 EIP-1967 的存储槽位可降低存储冲突风险。
+- 区块浏览器兼容性。
 
--   Every call not only incurs runtime gas cost of delegatecall from the Proxy but also incurs cost of SLOAD for checking whether the caller is admin.
--   Because the upgrade logic lives on the proxy, there is more bytecode so the deploy costs are higher.
+**缺点**
 
-**Examples**
+- 每次调用不仅会产生 `delegatecall` 的成本，还会产生检查调用者是否为管理员的 SLOAD 成本。
+- 由于升级逻辑在代理上，使得字节码体积更大，因此部署成本更高。
 
--   dYdX
--   USDC
--   Aztec
+**示例**
 
-**Known vulnerabilities**
+- dYdX
+- USDC
+- Aztec
 
--   Delegatecall and selfdestruct not allowed in implementation
--   Uninitialized proxy
--   Storage collision
+**已知漏洞**
 
-**Further reading**
+- 实现合约中不允许使用 `delegatecall` 和 `selfdestruct`
+- 未初始化代理
+- 存储冲突
 
--   [ERC-1538: Transparent Contract Standard](https://eips.ethereum.org/EIPS/eip-1538)
+**进一步阅读**
+
+- [ERC-1538: Transparent Contract Standard](https://eips.ethereum.org/EIPS/eip-1538)
 
 ## Universal Upgradeable Proxy Standard (UUPS)
 
