@@ -126,7 +126,7 @@ PackedContract 展示了这个例子，它只是 PaddedContract 中变量的重�
 
 **缺点**
 
-- 每次调用都会增加一次 `delegatecall` 的成本。
+- 每次调用都会产生一次 `delegatecall` 的成本。
 
 **示例**
 
@@ -192,7 +192,7 @@ PackedContract 展示了这个例子，它只是 PaddedContract 中变量的重�
 
 - 容易出现存储冲突和函数冲突。
 - 相比现代方案安全性较低。
-- 每次调用都会增加一次 `delegatecall` 的成本。
+- 每次调用都会产生一次 `delegatecall` 的成本。
 
 **已知漏洞**
 
@@ -206,59 +206,77 @@ PackedContract 展示了这个例子，它只是 PaddedContract 中变量的重�
 - [The First Proxy Contract](https://ethereum-blockchain-developer.com/110-upgrade-smart-contracts/05-proxy-nick-johnson/)
 - [Writing Upgradeable Contracts](https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable)
 
-## EIP-1967 Upgradeable Proxy
+## EIP-1967 可升级 Proxy
 
-This is the “solution” to storage collisions.
+这是存储冲突的"解决方案"。
 
-This is similar to the Upgradeable Proxy, except that it reduces risk of storage collision by using the unstructured storage pattern. It does not store the implementation contract address in slot 0 or any other standard storage slot.
+它与普通的可升级代理类似，但通过采用非结构化存储模式(unstructured storage pattern)来减少存储冲突的风险。具体来说，它不会把实现合约地址存放在槽位(slot) 0 或任何标准存储槽中。
 
-### What is the Unstructured Storage Pattern?
+### 什么是非结构化存储模式？
 
-A problem that quickly comes up when using proxies has to do with the way in which variables are stored in the proxy contract. Suppose that the proxy stores the logic contract’s address in its only variable address public \_implementation;. Now, suppose that the logic contract is a basic token whose first variable is address public \_owner. Both variables are 32 byte in size, and as far as the EVM knows, occupy the first slot of the resulting execution flow of a proxied call. When the logic contract writes to \_owner, it does so in the scope of the proxy’s state, and in reality writes to \_implementation. This problem can be referred to as a "storage collision".
+使用代理时，很快会出现一个问题：变量在代理合约中的存储位置可能与逻辑合约的变量发生冲突。
+举例：
+假设代理合约中存储实现合约地址的变量为：
+
+```solidity
+address public _implementation;
+```
+
+而逻辑合约是一个简单的代币，它的第一个变量为
+
+```solidity
+address public _owner;
+```
+
+这两个变量都是 32 字节大小，就 EVM 所知，它们占据代理调用的执行流程的第一个槽位。当逻辑合约写入 `_owner` 时，它在 Proxy 状态的范围内执行，实际上写入的是 `_implementation`。这个问题可以称为"存储冲突"。
 
 ![](./public/1.png)
 
-There are many ways to overcome this problem, and the "unstructured storage" approach which OpenZeppelin Upgrades implements works as follows. Instead of storing the \_implementation address at the proxy’s first storage slot, it chooses a pseudo random slot instead. This slot is sufficiently random, that the probability of a logic contract declaring a variable at the same slot is negligible. The same principle of randomizing slot positions in the proxy’s storage is used in any other variables the proxy may have, such as an admin address (that is allowed to update the value of \_implementation), etc.
+解决这个问题的方法有很多，而 OpenZeppelin Upgrades 所采用的"非结构化存储"方案的工作原理如下：
+它不是将 `_implementation` 地址存储在代理合约的第一个存储槽位(storage slot)，而是选择一个伪随机槽位。
+这个槽位足够随机，因此逻辑合约在同一槽位声明变量的概率可以忽略不计。
+同样的随机化存储槽位的原则，也被应用在代理合约可能拥有的其他变量上，例如管理员地址（拥有更新 `_implementation` 的权限）等。
 
 ![](./public/2.png)
 
-OpenZeppelin contracts use the keccak-256 hash of the string “eip1967.proxy.implementation” minus one\*. Because this slot is widely used, block explorers can identify and handle when proxies are being used.
+OpenZeppelin 合约使用 keccak256("eip1967.proxy.implementation") - 1\*作为实现合约地址的存储槽位。由于这个槽位被行业广泛采用，区块浏览器也能够识别、检测代理的使用情况。
 
-\*The minus provides additional safety because without it, the slot has a known preimage, but after subtracting 1, the preimage is unknown. For a known preimage, the storage slot may be overwritten via a mapping for example, where storage slot for its key is determined using a keccak-256 hash.
+\*减一提供了额外的安全性，因为如果没有它，槽位有一个已知的原像，但减去 1 后，原像是未知的。
+对于已知的原像，存储槽位可能通过映射被覆盖，例如，其键的存储槽位是使用 keccak-256 哈希确定的。
 
-[EIP-1967](https://eips.ethereum.org/EIPS/eip-1967) also specifies a slot for admin storage (auth) as well as Beacon Proxies.
+[EIP-1967](https://eips.ethereum.org/EIPS/eip-1967) 也指定了管理员存储（auth）的槽位以及 Beacon Proxy。
 
-**Implementation address** - Located in a unique storage slot in the proxy contract.
+**实现地址** - 位于代理合约中的唯一存储槽位。
 
-**Upgrade logic** - Varies based on implementation.
+**升级逻辑** - 根据实现方式而有所不同。
 
-**Contract verification** - Yes, most EVM block explorers support it.
+**合约验证** - 是的，大多数 EVM 区块浏览器都支持这种代理模式的验证。
 
-**Use cases**
+**使用场景**
 
--   When you need more security than the basic Upgradeable Proxy.
+- 当您需要比基础 可升级代理 更高的安全性时。
 
-**Pros**
+**优点**
 
--   Reduces risk of storage collisions.
--   Block explorer compatibility
+- 降低存储冲突的风险。
+- 区块浏览器兼容性
 
-**Cons**
+**缺点**
 
--   Susceptible to function clashing.
--   Less secure than modern counterparts.
--   Every call incurs cost of delegatecall from the Proxy.
+- 容易受到函数冲突的影响。
+- 相比现代方案安全性较低。
+- 每次调用都会产生一次 `delegatecall` 的成本。
 
-**Known vulnerabilities**
+**已知漏洞**
 
--   Delegatecall and selfdestruct not allowed in implementation
--   Uninitialized proxy
--   Function clashing
+- 实现中不允许 `delegatecall` 和 `selfdestruct`
+- 未初始化代理
+- 函数冲突
 
-**Further reading**
+**进一步阅读**
 
--   [EIP-1967 Standard Proxy Storage Slots](https://ethereum-blockchain-developer.com/110-upgrade-smart-contracts/09-eip-1967/)
--   [The Proxy Delegate](https://fravoll.github.io/solidity-patterns/proxy_delegate.html)
+- [EIP-1967 Standard Proxy Storage Slots](https://ethereum-blockchain-developer.com/110-upgrade-smart-contracts/09-eip-1967/)
+- [The Proxy Delegate](https://fravoll.github.io/solidity-patterns/proxy_delegate.html)
 
 ## Transparent Proxy Pattern (TPP)
 
