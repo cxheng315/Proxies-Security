@@ -649,16 +649,16 @@ Slither 的 [slither-check-upgradeability](https://github.com/crytic/slither/wik
 1. [OpenZeppelin Proxy Vulnerability](https://github.com/OpenZeppelin/openzeppelin-contracts/security/advisories/GHSA-5vp3-v4hc-gx76)
 2. [iosiro Disclosure of OpenZeppelin Vulnerability](https://www.iosiro.com/blog/openzeppelin-uups-proxy-vulnerability-disclosure)
 
-## Development Guide to Proxies
+## Proxy 开发指南
 
-The below listed resources can be used as development guides to create upgradeable smart contracts using proxies:
+以下资源可作为使用代理构建可升级智能合约的开发参考：
 
 1. [Writing Upgradeable Contracts by OpenZeppelin](https://docs.openzeppelin.com/upgrades-plugins/1.x/writing-upgradeable)
 2. [Proxy API by OpenZeppelin](https://docs.openzeppelin.com/contracts/4.x/api/proxy)
 3. [How to create a Beacon Proxy](https://medium.com/coinmonks/how-to-create-a-beacon-proxy-3d55335f7353)
 4. [How to use the UUPS proxy pattern to upgrade smart contracts](https://blog.logrocket.com/using-uups-proxy-pattern-upgrade-smart-contracts/#setup-with-hardhat-and-openzeppelin)
 
-## References
+## 参考资料
 
 1. Offical ERC Releases
 2. OpenZeppelin
