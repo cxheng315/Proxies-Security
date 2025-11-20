@@ -17,7 +17,7 @@
   - [通用可升级 Proxy 标准 (UUPS)](#通用可升级-proxy-标准-uups)
   - [Beacon Proxy](#beacon-proxy)
   - [Diamond Proxy](#diamond-proxy)
-  - [Proxy 模式对比](#比较-proxy-模式)
+  - [Proxy 模式对比](#proxy-模式比较)
 - [Proxy 漏洞安全指南](#proxy-漏洞安全指南)
   - [Delegatecall 到不存在的外部合约](#1-delegatecall-到不存在的外部合约)
   - [Delegatecall 与 Selfdestruct 漏洞](#2-delegatecall-与-selfdestruct-漏洞)
@@ -559,7 +559,7 @@ Diamond 代理体系具有一套独特的术语：
 - [Introduction to EIP-2535 Diamonds](https://eip2535diamonds.substack.com/p/introduction-to-the-diamond-standard)
 - [Dark Forest and the Diamond standard](https://blog.zkga.me/dark-forest-and-the-diamond-standard)
 
-### 比较 Proxy 模式
+### Proxy 模式比较
 
 下表对比了 Diamond、Transparent 和 UUPS 三种代理模式的优缺点：
 
