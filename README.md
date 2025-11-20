@@ -29,78 +29,90 @@
 
 ## 介绍
 
-欢迎来到 QuillAudits 的 Proxy 与可升级智能合约仓库。本仓库收录了理解 Solidity 智能合约可升级性所需的所有技术概念、理论基础、实践说明以及实现示例。
+欢迎来到 QuillAudits 的 Proxy 与可升级智能合约仓库。本仓库收录了理解 Solidity 智能合约可升级性所需的技术概念、理论基础、实践指南以及实现示例。
 
-区块链常被视为具有数据不可篡改性的系统，人们长期以来认为“一旦部署，就无法更改”。这对于历史交易信息依然成立，但对于智能合约的存储与地址而言，情况并非完全如此。
+区块链通常被视为具有数据不可篡改性的系统，人们也长期认为“合约一旦部署，就无法更改”。这一点对于历史交易记录依然成立，但当涉及智能合约的存储与地址时，情况则并非绝对如此。
 
 #### 为什么需要 Proxy 以及如何使用它？
 
-从设计上来看，部署在区块链上的合约代码是不可变的。虽然不可篡改性是区块链的核心特性之一，但在需要可升级性时也会带来挑战。许多新手可能会疑惑：既然区块链强调不可篡改，为何还需要“升级”？事实上，仍有许多需要修改代码的场景，例如错误修复、安全补丁、性能优化、新功能发布等。
+从设计上看，部署在区块链上的合约代码是不可变的。虽然不可篡改性是区块链的核心特性之一，但在需要可升级性时，它也会带来实际挑战。许多新手可能会疑惑：既然区块链强调不可篡改，为什么还需要“升级”？事实上，仍有许多需要修改代码的场景，例如错误修复、安全补丁、性能优化、新功能发布等。
 
-在直接进入 Proxy 和可升级合约之前，我们需要先了解 Solidity 的 `delegatecall` 操作码是如何工作的。而在理解 `delegatecall` 之前，了解 EVM 如何在存储中保存合约变量也会很有帮助。
+在正式进入 Proxy 与可升级合约的主题之前，我们需要先了解 Solidity 中 `delegatecall` 操作码的工作机制。而在理解 `delegatecall` 之前，理解 EVM 如何在存储中保存并管理合约变量也会非常有帮助。
 
 ## 智能合约存储布局
 
-合约存储布局是指的是管理合约中存储变量在长期存储中如何排列的规则。几乎所有的智能合约都有需要长期保存的状态变量。在 Solidity 中，开发者可以使用 3 种不同类型的存储空间来指示 EVM 将变量储存在哪里：`memory`、`calldata` 和 `storage`。这里，我们将讨论存储布局。
+合约存储布局指的是管理合约中状态变量在持久化存储中如何排列的规则。几乎所有智能合约都需要保存长期状态变量。在 Solidity 中，开发者可以使用三种不同的存储区域来指定 EVM 将变量存储的位置：`memory`、`calldata` 和 `storage`。在本节中，我们主要讨论与可升级合约密切相关的 storage 存储布局。
 
-每个合约都有自己的存储区域，这是一个持久的可读写存储空间区域。合约只能从自己的存储中读取和写入。合约的存储被划分为 2²⁵⁶ 个槽位，每个槽位为 32 字节(bytes)。所有槽位的初始值均为 0。
+每个合约都有自己独立的存储空间，用于持久且可读写的数据存储。合约只能读取和写入其自身的存储区域。合约的存储被划分为 2²⁵⁶ 个槽（slots），每个槽大小为 32 字节（bytes），且所有槽的初始值均为 0。
 
 ### 状态变量是如何存储的？
 
 Solidity 会按照状态变量在合约中声明的顺序，从槽位 0 开始，自动将每个已定义的状态变量映射到存储槽位中。
-在这里，我们可以看到变量 a、b 和 c 是如何映射到它们各自的存储槽位的。
+在下图中，我们可以看到变量 `a`、`b` 和 `c` 是如何映射到各自的存储槽位的：
 
 ![](https://pbs.twimg.com/media/GJs-fFZasAAQwVl?format=jpg&name=large)
 
-为了在存储中保存占用少于 32 字节(bytes)的变量，EVM 会用 0 进行填充，直到占满槽位的所有 32 字节(bytes)，然后再将填充后的值写入存储。
-许多变量类型都小于 32 字节(bytes)槽位的大小，例如：`bool`、`uint8` 和 `address`。
+当变量占用少于 32 字节（bytes）时，EVM 会使用 0 进行填充，直到占满整个槽位的 32 字节，再将填充后的值写入存储。
+许多类型的变量都小于 32 字节，例如：`bool`、`uint8`、`address`。
 
 ![](https://pbs.twimg.com/media/GJs_0ozasAAZDOP?format=jpg&name=medium)
 
-如果我们仔细考虑合约状态变量的大小和声明顺序，EVM 会将变量打包到存储槽位中，以减少使用的存储空间。
-以上面的 PaddedContract 为例，我们可以重新排序状态变量的声明，让 EVM 将变量打包到存储槽位中。
-PackedContract 展示了这个例子，它只是 PaddedContract 中变量的重新排序：
+如果我们仔细设计状态变量的大小与声明顺序，EVM 就能将多个变量打包到同一个存储槽位中，从而减少存储占用。
+以上图的 `PaddedContract` 为例，我们可以通过重新排序变量的声明，让 EVM 自动将它们打包。
+`PackedContract` 展示了这种重新排列后的效果，它仅改变了变量声明的顺序：
 
 ![](https://pbs.twimg.com/media/GJvVjgRbQAAinx3?format=jpg&name=medium)
 
-然而，将变量打包在一起而不使用填充，也存在一个需要注意的问题。
-如果打包的变量并不是经常一起使用，那么虽然打包可以节省存储占用，但在读取或写入这些变量时，反而可能显著增加 gas 成本。
-例如，如果我们需要经常读取一个变量而不读取打包的另一个变量，那么最好不要打包这些变量。
-这是开发者在编写合约时必须考虑的设计权衡。
+不过，将变量打包而不使用填充，也会带来一些潜在问题。
+如果被打包的变量并不经常一起使用，虽然打包能节省存储空间，但在读写其中任意一个变量时，可能会显著增加 gas 成本。
+例如，如果我们需要频繁读取某个变量，而另一个被打包在同一槽位的变量很少使用，那么将它们分开存储反而更合适。
+
+因此，这种“存储空间节省”与“访问成本增加”之间的权衡，是开发者在编写合约时必须认真考虑的设计点。
 
 ### 映射在智能合约存储中是如何存储的？
 
-对于映射(mapping)，标记槽位仅用于标记该 mapping 的存在（即基础槽位 base slot）。
-要查找某个键对应的的值，使用公式 `keccak256(key + base slot)`。
-我们可以通过以下示例更好地理解它：
+对于映射（mapping），其声明所在的槽位仅作为标记该 mapping 存在的“基础槽位”（base slot）。
+要查找某个键对应的值，EVM 会使用以下公式计算其实际存储位置：
+`keccak256(key + base slot)`。
+
+下图的示例可以帮助我们更直观地理解这一点：
 
 ![](https://pbs.twimg.com/media/GJvUO6_bUAAkXLp?format=jpg&name=medium)
 
 ## `delegatecall`
 
-存在一种名为 `delegatecall` 的特殊消息调用形式。它与普通消息调用几乎相同，不同之处在于：目标地址(target address)中的代码会在调用合约(calling contract)的上下文（即调用者的地址）中执行，并且 `msg.sender` 和 `msg.value` 的值保持不变。
+Solidity 中存在一种特殊的消息调用形式，称为 `delegatecall`。它与普通的消息调用非常相似，但不同之处在于：目标地址（target address）中的代码会在调用合约（calling contract）的上下文中执行，也就是使用调用者本身的存储、地址和余额，并且 `msg.sender` 与 `msg.value` 都保持不变。
 
-这意味着合约可以在运行时动态加载来自其他地址的代码。存储(storage)、当前地址和余额仍然指向调用合约，只有代码是取自被调用的地址。
+这意味着合约可以在运行时动态加载并执行来自其他合约地址的代码。
+在这种模式下，存储（storage）、地址以及余额都属于调用方合约，只有代码来自被调用合约。
 
-这使得在 Solidity 中实现"库"(library)功能成为可能：即可复用的库代码可以应用于某个合约的存储，例如用于实现复杂的数据结构。
+得益于此特性，Solidity 才得以实现“库”（library）功能：可复用的库代码可以在多个合约之间共享，而无需每个合约都重复部署逻辑。例如用于实现复杂的数据结构。
 
-`delegatecall`，顾名思义，是一种调用机制。调用者合约通过它来调用目标合约中的函数，但当目标合约执行其逻辑时，执行上下文并不是发起调用的用户，而是调用者合约本身。
+顾名思义，`delegatecall` 是一种“委托调用”机制。调用者合约通过它执行目标合约中的函数，但在运行目标合约逻辑时，其执行上下文并不是用户，而是调用者合约本身。
 
 ![](https://pbs.twimg.com/media/GMMgUtibMAAJPsi?format=jpg&name=medium)
 
-那么当合约使用 `delegatecall` 调用目标合约时，存储状态将会如何发生变化呢？
+那么，当合约通过 `delegatecall` 调用目标合约时，存储状态会发生什么变化呢？
 
-因为在使用 `delegatecall` 调用目标合约时，执行上下文在调用者合约上，因此所有状态变更逻辑都会反映在调用者的存储上。
+由于 `delegatecall` 会在调用者的存储上下文中执行目标合约代码，所有状态变量的读写操作都将作用于调用者合约的存储，而不是目标合约的存储。
 
-例如，假设有代理(Proxy)合约和逻辑(Business)合约。代理合约 `delegatecall` 到逻辑合约函数。如果用户调用代理合约，代理合约将 `delegatecall` 到逻辑合约，函数将被执行。但所有状态变更都将反映在代理合约存储中，而不是逻辑合约。
+例如，假设我们有一个代理（Proxy）合约和一个逻辑（Business）合约。当用户调用代理时，代理合约将使用 `delegatecall` 调用逻辑合约的函数。逻辑代码会正常执行，但所有状态变更都发生在代理合约的存储中，而不是逻辑合约本身。
 
 ### Callcode 和 Delegatecall 的比较
 
 ![](https://proxies.yacademy.dev/assets/images/Comparison_Callcode_Delegatecall.png)
 
-`callcode` 和 `delegatecall` 在存储上具有相同的行为。也就是说，它们都可以执行实现合约(implementation)的代码并对代理合约(proxy)的存储进行操作。它们之间的区别在于 `msg.value` 和 `msg.sender`。
-在 `callcode` 中，`msg.value` 可以在实现合约中被自定义为新的值，`msg.sender` 会被改为代理合约的地址。
-在 `delegatecall` 中，`msg.value` 和 `msg.sender` 在代理合约和实现合约中都保持不变。
+`callcode` 与 `delegatecall` 在存储行为上是一致的：二者都会执行实现合约（implementation）的代码，并对代理合约（proxy）的存储进行读写。
+它们的主要区别在于 `msg.value` 与 `msg.sender` 的处理方式。
+
+- 在 `callcode` 中：
+
+  - `msg.value` 可以在实现合约中被改变。
+  - `msg.sender` 会被替换为代理合约的地址。
+
+- 在 `delegatecall` 中：
+
+  - `msg.value` 和 `msg.sender` 在代理与实现合约中都保持完全一致。
 
 ## Proxy 模式
 
@@ -533,14 +545,15 @@ Diamond 代理的术语表使用了一套独特的专业词汇：
 
 ### 1. 对不存在的外部合约执行 Delegatecall
 
-在使用 `delegatecall` 时，EVM 不会自动验证外部合约是否存在。如果调用的外部合约不存在，返回值将为 `true`。[Solidity 文档中已对此给出了警告说明](https://docs.soliditylang.org/en/latest/control-structures.html#error-handling-assert-require-revert-and-exceptions)，其中提到：
+在使用 `delegatecall` 时，EVM 不会自动检查目标合约是否存在。如果被调用的外部合约地址不存在，`delegatecall` 仍然可能返回 `true`。
+正如 [Solidity 官方文档所警告的](https://docs.soliditylang.org/en/latest/control-structures.html#error-handling-assert-require-revert-and-exceptions)：
 
-> 低级函数 `call`、`delegatecall` 和 `staticcall` 在调用的账户不存在时，会将第一个返回值设为 `true`，这是 EVM 的设计行为。因此，如果需要确保账户存在，必须在调用前先进行检查。
+> 低级函数 `call`、`delegatecall` 和 `staticcall` 在目标账户不存在时，依然会将其第一个返回值设为 `true`。这是 EVM 设计上的行为。因此，如果你需要确保目标账户存在，必须在调用前先自行检查。
 
 **测试步骤**
 
-第一步是确定 `delegatecall` 实际调用的外部合约地址。
-如果目标地址可能不存在合约，而在调用 `delegatecall` 之前又没有检查该合约是否部署，则 `delegatecall` 可能会意外返回 `true`，导致错误行为未被发现。
+第一步是确认 `delegatecall` 实际要调用的外部合约地址。
+如果目标地址可能不存在合约，并且在调用 `delegatecall` 之前没有对其进行部署检查，那么 `delegatecall` 可能会意外返回 `true`，从而导致错误行为无法被察觉。
 
 ### 2. Delegatecall 与 Selfdestruct 漏洞
 
