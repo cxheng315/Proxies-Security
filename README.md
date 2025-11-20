@@ -581,20 +581,20 @@ Diamond 代理体系具有一套独特的术语：
 
 ### 2. Delegatecall 与 Selfdestruct 漏洞
 
-当 `selfdestruct` 与 `delegatecall` 同时使用时，可能会出现不可预见的边缘情况(edge case)。特别是，如果合约 B 中的某个函数包含 `selfdestruct`，而合约 A 通过 `delegatecall` 调用该函数，那么被销毁的将是合约 A 本身。
+当 `selfdestruct` 与 `delegatecall` 同时出现时，可能会产生一些不可预期的边缘情况（edge cases）。尤其是当合约 A 使用 `delegatecall` 调用合约 B 的某个包含 `selfdestruct` 的函数时，被销毁的将不是合约 B，而是合约 A 本身。
 
 **测试步骤**
 
-识别此类漏洞相对简单。
+识别此类漏洞相对简单：
 
-1. 若合约包含 `delegatecall` 到用户提供的目标地址（例如作为外部函数的参数），则存在重大的整体安全风险。
-2. 若 `delegatecall` 到硬编码的目标合约
+1. 如果合约包含对用户提供的目标地址执行 `delegatecall`（例如作为外部函数参数传入），则存在严重的整体安全风险。
+2. 如果 `delegatecall` 指向硬编码的目标合约：
 
-   - 检查目标合约是否有 `selfdestruct`。
-   - 若目标合约没有 `selfdestruct`，但有进一步的 `delegatecall` ，则继续沿着 `delegatecall` 路径检查。
-   - 一旦链路中的任意合约包含 `selfdestruct` ，则最初发出 `delegatecall` 的合约可能会被删除。
+   - 检查目标合约是否包含 `selfdestruct`。
+   - 若目标合约本身无 `selfdestruct`，但进一步调用了其他 `delegatecall`，应继续沿调用链检查。
+   - 一旦调用链上的任意合约包含 `selfdestruct`，最初发起 `delegatecall` 的合约就有可能被销毁。
 
-3. 如果使用 EIP-1167 最小代理模式，那么由该主合约克隆出的所有代理实例都有可能被销毁。
+3. 若使用 EIP-1167 最小代理模式，则由同一逻辑合约克隆出的所有代理实例都有可能受到影响，被意外销毁。
 
 **CTF 示例**
 
