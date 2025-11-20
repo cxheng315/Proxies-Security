@@ -593,28 +593,31 @@ Diamond 代理的术语表使用了一套独特的专业词汇：
 2. [Nomic Labs' Blog Post](https://medium.com/nomic-foundation-blog/malicious-backdoors-in-ethereum-proxies-62629adf3357)
 3. [OpenZeppelin Docs Explaining Function Clashing](https://docs.openzeppelin.com/sdk/2.5/pattern#transparent-proxies-and-function-clashes)
 
-### 4. Storage Collision Vulnerability
+### 4. 存储冲突漏洞
 
-When the storage slot arrangement in the proxy contract and the implementation contract differ, a storage collision occurs. This is problematic because the variables in the implementation contract control where the data is kept, but the delegatecall in the proxy contract means that the implementation contract is using the proxy contract's storage. A storage collision may occur if the storage slots of the implementation contract and the proxy contract are not aligned.
+当代理合约和实现合约中的存储槽位布局不一致时，就会发生存储冲突。问题在于：实现合约中的变量定义了数据应存放的位置，但由于代理合约使用 `delegatecall` ，实现合约实际上会读写代理合约的存储空间。如果两者的存储槽位未对齐，就可能导致存储被错误覆盖，从而产生存储冲突。
 
-**Testing Procedure**
+**测试步骤**
 
-There are many approaches to testing for this vulnerability. One way to test for this vulnerability is using the [sol2uml](https://github.com/naddison36/sol2uml) tool. You can visualize the storage slots of the proxy contract and the implementation contract to see if they have any mismatches.
+要测试此漏洞的方法有很多。
 
-A second approach that is more programmatic is using [slither-read-storage](https://github.com/crytic/slither/blob/master/slither/tools/read_storage/README.md) to collect the storage slots used by the proxy contract and the implementation contract, then comparing them.
+1. 可视化存储布局
+   使用 [sol2uml](https://github.com/naddison36/sol2uml) 工具，将代理合约和实现合约的存储布局可视化，以直接检查是否有任何不匹配。
 
-A third approach is to find a tool that is designed to compare the storage slots of two contracts.
+2. 程序化方式提取槽位并比较
+   使用 [slither-read-storage](https://github.com/crytic/slither/blob/master/slither/tools/read_storage/README.md) 提取两个合约使用的存储槽位，再进行比对。
 
-Slither has a [slither-check-upgradeability](https://github.com/crytic/slither/wiki/Upgradeability-Checks) tool that has several detectors for storage layout issues.
+3. 使用专门比对存储布局的的工具
+   Slither 提供 [slither-check-upgradeability](https://github.com/crytic/slither/wiki/Upgradeability-Checks) 工具，包含多个检测器，可检查代理相关的存储布局问题。
 
-**CTF Examples**
+**CTF 示例**
 
 1. [Solidity by Example](https://solidity-by-example.org/hacks/delegatecall/)
-2. [Ethernaut Level 6 “Delegation”](https://ethernaut.openzeppelin.com/level/0x73379d8B82Fda494ee59555f333DF7D44483fD58)
-3. [Ethernaut Level 16 “Preservation”](https://ethernaut.openzeppelin.com/level/0x7ae0655F0Ee1e7752D7C62493CEa1E69A810e2ed)
-4. [Ethernaut Level 24 “Puzzle Wallet”](https://ethernaut.openzeppelin.com/level/0x725595BA16E76ED1F6cC1e1b65A88365cC494824)
+2. [Ethernaut Level 6 "Delegation"](https://ethernaut.openzeppelin.com/level/0x73379d8B82Fda494ee59555f333DF7D44483fD58)
+3. [Ethernaut Level 16 "Preservation"](https://ethernaut.openzeppelin.com/level/0x7ae0655F0Ee1e7752D7C62493CEa1E69A810e2ed)
+4. [Ethernaut Level 24 "Puzzle Wallet"](https://ethernaut.openzeppelin.com/level/0x725595BA16E76ED1F6cC1e1b65A88365cC494824)
 
-**Further Reading**
+**进一步阅读**
 
 1. [MixBytes Storage Collision Audit](https://mixbytes.io/blog/collisions-solidity-storage-layouts)
 
