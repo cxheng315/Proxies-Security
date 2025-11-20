@@ -635,20 +635,20 @@ Solidity 编译器会检测同一合约内部的函数选择器重复问题，�
 
 ### 4. 存储冲突漏洞
 
-当代理合约和实现合约中的存储槽位布局不一致时，就会发生存储冲突。问题在于：实现合约中的变量定义了数据应存放的位置，但由于代理合约使用 `delegatecall` ，实现合约实际上会读写代理合约的存储空间。如果两者的存储槽位未对齐，就可能导致存储被错误覆盖，从而产生存储冲突。
+当代理合约与实现合约的存储槽位布局不一致时，就会发生存储冲突。问题在于：实现合约的变量定义了数据应放置的槽位，但由于代理使用 `delegatecall`，实现合约实际上读写的是代理合约的存储。如果两者的存储槽位排列不一致，就可能导致错误覆盖，从而产生存储冲突。
 
 **测试步骤**
 
-要测试此漏洞的方法有很多。
+检测此漏洞的方法包括以下几种：
 
 1. 可视化存储布局
-   使用 [sol2uml](https://github.com/naddison36/sol2uml) 工具，将代理合约和实现合约的存储布局可视化，以直接检查是否有任何不匹配。
+   使用 [sol2uml](https://github.com/naddison36/sol2uml) 将代理与实现合约的存储布局可视化，以直观判断是否存在不匹配。
 
-2. 程序化方式提取槽位并比较
-   使用 [slither-read-storage](https://github.com/crytic/slither/blob/master/slither/tools/read_storage/README.md) 提取两个合约使用的存储槽位，再进行比对。
+2. 程序化方式提取存储槽位并比较
+   使用 [slither-read-storage](https://github.com/crytic/slither/blob/master/slither/tools/read_storage/README.md) 提取两个合约实际使用的存储槽位，并进行比对。
 
-3. 使用专门比对存储布局的的工具
-   Slither 提供 [slither-check-upgradeability](https://github.com/crytic/slither/wiki/Upgradeability-Checks) 工具，包含多个检测器，可检查代理相关的存储布局问题。
+3. 使用专门工具检测存储布局问题
+   Slither 提供的 [slither-check-upgradeability](https://github.com/crytic/slither/wiki/Upgradeability-Checks) 包含多种检测器，可直接检查与代理相关的存储布局风险。
 
 **CTF 示例**
 
