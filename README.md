@@ -480,30 +480,27 @@ Beacon 合约背后的核心思想是 复用性。
 
 ## Diamond Proxy
 
-[EIP-2535](https://eips.ethereum.org/EIPS/eip-2535) "Diamonds" 是一种模块化智能合约系统，可在部署后进行升级或扩展，并几乎不存在代码大小限制。
+[EIP-2535](https://eips.ethereum.org/EIPS/eip-2535) “Diamonds” 是一种模块化智能合约系统，可在部署后进行升级或扩展，并在代码大小上几乎没有限制。
 EIP 中的定义如下：
 
 > Diamond 是一个具有外部函数的合约，这些外部函数由称为 _facets_ 的合约提供。
 > Facets 是独立的合约，它们可以共享内部函数、库和状态变量。
 
-Diamond 模式由一个核心的 `Diamond.sol` 代理合约组成。除了其他存储外，此合约包含一个函数注册表，这些函数可以在被称为 `facets` 的外部合约上调用。
+Diamond 模式由一个核心的 `Diamond.sol` 代理合约组成。除了其他存储外，该合约包含一个函数选择器（selector）注册表，用于将调用路由到外部的 `facet` 合约。
 
-Diamond 代理的术语表使用了一套独特的专业词汇：
+Diamond 代理体系具有一套独特的术语：
 
 ![](./public/3.png)
 
-此标准是对 [EIP-1538](https://eips.ethereum.org/EIPS/eip-1538) (TPP) 的改进，其设计动机也与之相同。
+此标准是对 [EIP-1538](https://eips.ethereum.org/EIPS/eip-1538)（透明代理模式）的改进，其设计动机也与之相似。
 
-一个已部署的 facet 可以被任意数量的 diamonds 使用。
+一个已部署的 facet 可以被任意数量的 diamonds 复用。
 
-下图展示了两个 diamonds 共享两个 facets 的情况：
+下图展示了两个 diamonds 共享两个 facets 的结构：
 
 - FacetA 被 Diamond1 使用
-
 - FacetA 被 Diamond2 使用
-
 - FacetB 被 Diamond1 使用
-
 - FacetB 被 Diamond2 使用
 
 ![](https://eips.ethereum.org/assets/eip-2535/facetreuse.png)
@@ -511,50 +508,51 @@ Diamond 代理的术语表使用了一套独特的专业词汇：
 ### 术语
 
 1. Diamond
-   是一个门面(facade)智能合约，通过 `delegatecall` 调用其 facets 中的函数。
-   Diamond 是有状态的。数据存储在 diamond 合约的存储中。
+   作为一个门面（facade）智能合约，通过 `delegatecall` 调用其 facets 中的函数。
+   Diamond 是有状态的，所有数据都存储在 diamond 合约自身的存储中。
 
 2. Facet
-   是一个无状态的智能合约或具有外部函数的 Solidity 库。
-   Facet 部署后，其一个或多个函数可以被添加到一个或多个 diamonds 中。
-   Facet 自身不会在其合约存储中保存数据，但可以定义状态并读写任意 diamond 的存储。
-   术语 _facet_ 来自钻石行业。它是钻石的一个侧面或平面。
+   一个无状态的智能合约或具有外部函数的 Solidity 库。
+   Facet 部署后，其一个或多个函数可以被添加到多个 diamonds 中。
+   Facet 自身不持有存储，但可以定义状态变量并操作 diamond 的存储。
+   “facet” 这个词源自钻石的切面。
 
-3. Loupe facet
-   提供内省(introspection)函数的 facet。
-   在钻石行业中，loupe 是用于查看钻石的放大镜。
+3. Loupe Facet
+   提供内省（introspection）功能的 facet。
+   “loupe” 是钻石行业中用于观察钻石的放大镜。
 
-4. 不可变函数(Immutable function)
-   指无法被替换或移除的外部函数（因为它直接在 diamond 中定义，或者因为 diamond 的逻辑不允许修改它）。
+4. 不可变函数（Immutable function）
+   指无法被替换或移除的外部函数。
+   它可能直接定义于 diamond，或根据 diamond 的逻辑被永久锁定。
 
-5. Mapping(在本 EIP 中)，
-   映射是两个事物之间的关联，不指特定的实现。
+5. Mapping（本 EIP 中）
+   指两个事物之间的映射关系，而非特定的 Solidity `mapping` 实现。
 
-**合约验证** - 可以使用 Louper 工具在 Etherscan 上验证合约。
+**合约验证** - 可以通过 Louper 工具在 Etherscan 上验证 Diamond 合约的结构。
 
 **使用场景**
 
-- 适用于需要最高级别可升级性与模块化互操作性的复杂系统。
+- 适用于需要最高可升级性与强模块化互操作性的复杂系统。
 
 **优点**
 
-- 提供一个稳定且长久可用的合约地址。从单一地址发出事件(event)可以简化事件处理。
-- 可用于拆分超过 Spurious Dragon 限制(24kb)的大型合约。
+- 提供一个稳定且长期可用的合约地址；从单一地址发出事件（event），有助于事件索引与处理。
+- 可以将超过 Spurious Dragon（24kb）字节码限制的大型合约进行拆分。
 
 **缺点**
 
-- 函数路由需要额外访问存储，导致 gas 成本增加。
-- 系统结构复杂，存储冲突风险上升。
-- 对仅需简单可升级性的场景，复杂性可能过高。
+- 函数调用需要额外的存储访问以进行路由，导致更高的 gas 成本。
+- 整体架构复杂，存储冲突风险升高。
+- 对仅需简单可升级性的项目而言，复杂度可能过高。
 
 **示例**
 
 - Simple DeFi
 - PartyFinance
 
-**已知漏洞**
+**已知漏洞/风险**
 
-- 实现合约中不允许使用 `delegatecall` 和 `selfdestruct`
+- 实现合约中不应使用 `delegatecall` 或 `selfdestruct`，否则可能导致不可预期的代理存储篡改或合约销毁风险。
 
 **进一步阅读**
 
