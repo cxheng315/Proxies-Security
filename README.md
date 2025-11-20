@@ -621,19 +621,30 @@ Diamond 代理的术语表使用了一套独特的专业词汇：
 
 1. [MixBytes Storage Collision Audit](https://mixbytes.io/blog/collisions-solidity-storage-layouts)
 
-### 5. Uninitialized Proxy Vulnerability
+### 5. 未初始化 Proxy 漏洞
 
-When a contract constructor is called automatically, why are proxies still required to have an initialize function? OpenZeppelin provides an explanation of the cause [here](https://docs.openzeppelin.com/upgrades-plugins/1.x/proxies#the-constructor-caveat). The constructor code of a contract is executed only once during deployment; however, the implementation contract's (also known as the logic contract) constructor code cannot be executed within the framework of the proxy contract. The constructor cannot be used for this purpose since the implementation contract's constructor function will always run in the context of the implementation contract. Instead, the implementation contract must save the value of the \_initialized variable in the proxy contract context. Because the initialize call needs to go via the proxy, this is the reason the implementation contract has an initialize method. There is a potential race condition that should be addressed because the initialize call needs to occur independently of the implementation contract deployment. One way to prevent this race condition is to protect the initialize function with an address control modifier, limiting its ability to be initialized to a specific msg.sender.
+当合约构造函数（constructor）在部署时已自动执行，为什么代理合约仍然需要一个 `initialize` 函数？OpenZeppelin 在[此处](https://docs.openzeppelin.com/upgrades-plugins/1.x/proxies#the-constructor-caveat)对此给出了详细解释。
 
-A specific variant of the uninitialized UUPS proxy vulnerability is found in [the OpenZeppelin library between version 4.1.0 and 4.3.2](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/security/advisories/GHSA-q4h9-46xg-m3x9).
+合约的构造函数代码只会在部署时运行一次；然而，实现合约（也称逻辑合约）的构造函数无法在代理合约的执行上下文中运行。由于实现合约的构造函数始终在其自身环境中执行，因此无法通过构造函数来初始化代理合约中的状态。
 
-**Testing Procedure**
+因此，实现合约必须在代理的存储上下文中写入 `_initialized` 变量，这也是实现合约必须提供 `initialize` 函数的根本原因。初始化调用必须通过代理执行，而不是通过实现合约本身，从而引入了一个潜在的竞争条件（race condition）：初始化必须在部署之后、且在代理被外部使用之前安全完成。
 
-Find the storage slot of the [initialized state variable](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/25aabd286e002a1526c345c8db259d57bdf0ad28/contracts/proxy/utils/Initializable.sol#L62) or a comparable variable that the initialization function uses to reverse if this is not the function's first call in order to test for this vulnerability. When using the OpenZeppelin private \_initialized variable from Initializable.sol, the contract has not been initialized if the \_initialized value is zero, and it has been initialized if the value is one.
+为避免这种竞争条件，可以为 `initialize` 函数加入基于地址的权限控制修饰符（modifier），将其调用权限限制为特定的 `msg.sender`。
 
-Slither has a [slither-check-upgradeability](https://github.com/crytic/slither/wiki/Upgradeability-Checks) tool that has several initializer issue detectors.
+在 [OpenZeppelin 4.1.0 至 4.3.2 之间](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/security/advisories/GHSA-q4h9-46xg-m3x9)，曾出现过未初始化 UUPS Proxy 漏洞的特定变体。
 
-**Further Reading**
+**测试步骤**
+
+要检测此漏洞，可以查找用于初始化检查的状态变量（例如 [`_initialized`](https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable/blob/25aabd286e002a1526c345c8db259d57bdf0ad28/contracts/proxy/utils/Initializable.sol#L62)）在代理合约中的存储槽位，或其他用于判断“是否为首次调用”的类似变量。
+
+在使用 OpenZeppelin 的 `Initializable.sol` 时，该文件中的私有变量 `_initialized` 会用于记录初始化状态：
+
+- `_initialized == 0` → 合约尚未初始化
+- `_initialized == 1` → 合约已完成初始化
+
+Slither 的 [slither-check-upgradeability](https://github.com/crytic/slither/wiki/Upgradeability-Checks) 工具包含多个与初始化相关的漏洞检测器，可用于辅助检查。
+
+**进一步阅读**
 
 1. [OpenZeppelin Proxy Vulnerability](https://github.com/OpenZeppelin/openzeppelin-contracts/security/advisories/GHSA-5vp3-v4hc-gx76)
 2. [iosiro Disclosure of OpenZeppelin Vulnerability](https://www.iosiro.com/blog/openzeppelin-uups-proxy-vulnerability-disclosure)
